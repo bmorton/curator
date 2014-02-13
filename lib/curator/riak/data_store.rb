@@ -29,6 +29,7 @@ module Curator
       def save(options)
         bucket = _bucket(options[:collection_name])
         object = ::Riak::RObject.new(bucket, options[:key])
+        object.vclock = options[:version_vector]
         object.content_type = options.fetch(:content_type, "application/json")
         object.data = options[:value]
         options.fetch(:index, {}).each do |index_name, index_data|
@@ -47,7 +48,13 @@ module Curator
         bucket = _bucket(bucket_name)
         begin
           object = bucket.get(key)
-          { :key => object.key, :data => _deserialize(object.data) } unless object.data.empty?
+          unless object.data.empty?
+            {
+              :key => object.key,
+              :data => _deserialize(object.data),
+              :version_vector => object.vclock
+            }
+          end
         rescue ::Riak::HTTPFailedRequest => failed_request
           raise failed_request unless failed_request.not_found?
         end

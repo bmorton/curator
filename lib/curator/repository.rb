@@ -2,12 +2,21 @@ require 'active_support/inflector'
 require 'active_support/core_ext/object/instance_variables'
 require 'active_support/core_ext/hash/indifferent_access'
 require 'json'
+require 'curator/version_vector_map'
 
 module Curator
   module Repository
     extend ActiveSupport::Concern
 
     module ClassMethods
+      attr_accessor :version_vector_map
+
+      def context(&block)
+        self.version_vector_map = VersionVectorMap.new
+        yield self
+        self.version_vector_map = nil
+      end
+
       def all
         data_store.find_all(collection_name).map do |result|
           _deserialize(result[:key], result[:data])
@@ -53,7 +62,9 @@ module Curator
 
       def find_by_id(id)
         if hash = data_store.find_by_key(collection_name, id)
-          _deserialize(hash[:key], hash[:data])
+          object = _deserialize(hash[:key], hash[:data])
+          _add_to_map(object, hash[:version_vector])
+          object
         end
       end
 
@@ -85,6 +96,10 @@ module Curator
           :index => _indexes(object)
         }
 
+        if version_vector = _version_vector_for_object(object)
+          hash[:version_vector] = version_vector
+        end
+
         if object.id
           hash[:key] = object.id
           data_store.save(hash)
@@ -114,7 +129,9 @@ module Curator
       def _find_by_attribute(attribute, value)
         if results = data_store.find_by_attribute(collection_name, attribute, value)
           results.map do |hash|
-            _deserialize(hash[:key], hash[:data])
+            object = _deserialize(hash[:key], hash[:data])
+            _add_to_map(object, hash[:version_vector])
+            object
           end
         end
       end
@@ -155,6 +172,16 @@ module Curator
       def _update_timestamps(object)
         object.updated_at = Time.now.utc
         object.created_at ||= object.updated_at
+      end
+
+      def _add_to_map(object, version_vector)
+        return unless version_vector_map
+        version_vector_map.add(:object => object, :identifier => version_vector)
+      end
+
+      def _version_vector_for_object(object)
+        return unless version_vector_map
+        version_vector_map[object.object_id]
       end
     end
   end

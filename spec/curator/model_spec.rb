@@ -98,6 +98,13 @@ describe Curator::Model do
     end
   end
 
+  describe "vector clock" do
+    it "can be set" do
+      instance = TestModel.new(:vclock => "abc123")
+      instance.vclock.should == "abc123"
+    end
+  end
+
   describe "ActiveModel" do
     it "extends ActiveModel::Naming" do
       TestModel.model_name.should == "TestModel"

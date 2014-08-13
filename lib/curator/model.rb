@@ -7,6 +7,7 @@ module Curator
     include ActiveModel::Conversion
 
     included do
+      attr_accessor :vclock
       attr_reader :created_at, :updated_at
       attr_writer :version
     end

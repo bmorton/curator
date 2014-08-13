@@ -44,7 +44,9 @@ module Curator
       end
 
       def delete(object)
-        data_store.delete(collection_name, object.id)
+        options = {}
+        options[:vclock] = object.vclock if object.respond_to?(:vclock)
+        data_store.delete(collection_name, object.id, options)
         nil
       end
 

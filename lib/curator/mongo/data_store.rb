@@ -61,7 +61,7 @@ module Curator
         collection.save document
       end
 
-      def delete(collection_name, id)
+      def delete(collection_name, id, options = {})
         collection = _collection(collection_name)
         collection.remove(:_id => id)
       end

@@ -16,7 +16,7 @@ module Curator
         "#{Curator.config.bucket_prefix}:#{Curator.config.environment}"
       end
 
-      def delete(bucket_name, key)
+      def delete(bucket_name, key, options = {})
         bucket = _bucket(bucket_name)
         object = bucket.get(key)
         object.delete

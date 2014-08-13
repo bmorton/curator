@@ -285,6 +285,22 @@ describe Curator::Repository do
         TestModelRepository.delete(model).should be_nil
         TestModelRepository.find_by_id(model.id).should be_nil
       end
+
+      it "sets the vclock" do
+        def_transient_class(:TestModelRepository) do
+          include Curator::Repository
+        end
+
+        def_transient_class(:TestModel) do
+          include Curator::Model
+          attr_reader :id, :some_field
+        end
+
+        model = TestModel.new(:vclock => "zxcvb")
+
+        TestModelRepository.data_store.should_receive(:delete).with(anything, anything, :vclock => "zxcvb")
+        TestModelRepository.delete(model)
+      end
     end
 
     describe "settings" do

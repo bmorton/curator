@@ -41,7 +41,7 @@ module Curator
         key
       end
 
-      def delete(collection_name, key)
+      def delete(collection_name, key, options = {})
         bucket = _bucket_name(collection_name)
         _records(bucket).delete(key)
         _indices(bucket).each_key do |name|

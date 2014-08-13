@@ -392,6 +392,26 @@ describe Curator::Repository do
         riak_data.has_key?("some_field").should be_false
       end
 
+      it "does not persist vclock inside object" do
+        def_transient_class(:TestModelRepository) do
+          include Curator::Repository
+          attr_reader :id, :some_field
+          indexed_fields :some_field
+        end
+
+        def_transient_class(:TestModel) do
+          include Curator::Model
+          attr_reader :id, :some_field
+        end
+
+        model = TestModel.new(:vclock => "abc123", :some_field => "test")
+
+        TestModelRepository.data_store.should_receive(:save).with do |args|
+          !args[:value]["vclock"]
+        end
+        TestModelRepository.save(model)
+      end
+
       it "persists timestamps" do
         def_transient_class(:TestModelRepository) do
           include Curator::Repository
@@ -509,6 +529,26 @@ describe Curator::Repository do
     end
 
     describe "deserialization" do
+      context "vclock" do
+        it "sets the model property" do
+          def_transient_class(:TestModelRepository) do
+            include Curator::Repository
+            attr_reader :id, :some_field
+            indexed_fields :some_field
+          end
+
+          def_transient_class(:TestModel) do
+            include Curator::Model
+            attr_reader :id, :some_field
+          end
+
+          mock_response = {:key => "mock-id", :data => {:some_field => "test"}, :vclock => "qwerty1234"}
+          TestModelRepository.data_store.stub(:find_by_key).and_return(mock_response)
+          object = TestModelRepository.find_by_id("mock-id")
+          object.vclock.should == "qwerty1234"
+        end
+      end
+
       context "migrations" do
         after(:each) do
           FileUtils.rm_rf Curator.config.migrations_path
@@ -632,6 +672,22 @@ describe Curator::Repository do
 
         model = TestModel.new
         TestModelRepository.save_without_timestamps(model).should == model
+      end
+
+      it "includes the vclock" do
+        def_transient_class(:TestModelRepository) do
+          include Curator::Repository
+          attr_reader :id
+        end
+
+        def_transient_class(:TestModel) do
+          include Curator::Model
+          attr_accessor :id
+        end
+
+        TestModelRepository.data_store.should_receive(:save).with(hash_including(:vclock => "a1s2d3"))
+        object = TestModel.new(:vclock => "a1s2d3")
+        TestModelRepository.save(object)
       end
     end
   end

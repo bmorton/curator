@@ -19,7 +19,7 @@ module Curator
 
       def all
         data_store.find_all(collection_name).map do |result|
-          _deserialize(result[:key], result[:data])
+          _deserialize(result)
         end
       end
 
@@ -62,7 +62,7 @@ module Curator
 
       def find_by_id(id)
         if hash = data_store.find_by_key(collection_name, id)
-          _deserialize(hash[:key], hash[:data])
+          _deserialize(hash)
         end
       end
 
@@ -93,6 +93,10 @@ module Curator
           :value => _serialize(object),
           :index => _indexes(object)
         }
+
+        if object.respond_to?(:vclock)
+          hash[:vclock] = object.vclock
+        end
 
         if object.id
           hash[:key] = object.id
@@ -132,7 +136,7 @@ module Curator
       def _find_by_attribute(attribute, value)
         if results = data_store.find_by_attribute(collection_name, attribute, value)
           results.map do |hash|
-            _deserialize(hash[:key], hash[:data]) if hash
+            _deserialize(hash) if hash
           end.compact
         end
       end
@@ -141,8 +145,12 @@ module Curator
         klass.new(attributes)
       end
 
-      def _deserialize(id, data)
+      def _deserialize(options = {})
+        id = options.fetch(:key)
+        data = options.fetch(:data)
+
         attributes = data.with_indifferent_access
+        attributes[:vclock] = options[:vclock] if options[:vclock]
         migrated_attributes = migrator.migrate(attributes)
         migrated_attributes[:id] = id
         deserialize(migrated_attributes)
@@ -167,7 +175,11 @@ module Curator
       end
 
       def _serialize(object)
-        serialize(object).reject { |key, val| val.nil? }.merge(:version => object.version)
+        serialized_object = serialize(object).reject do |key, val|
+          val.nil? || key == "vclock"
+        end
+        serialized_object[:version] = object.version
+        serialized_object
       end
 
       def _update_timestamps(object)

@@ -1,4 +1,5 @@
 require 'riak'
+require 'curator/riak/last_updated_resolver'
 
 module Curator::Riak
   class Configuration
@@ -9,6 +10,9 @@ module Curator::Riak
     def initialize
       ::Riak.escaper = CGI
       ::Riak.disable_list_keys_warnings = true
+      ::Riak::RObject.on_conflict do |robject|
+        LastUpdatedResolver.resolve(robject)
+      end
     end
 
     def data_store

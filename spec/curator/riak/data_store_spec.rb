@@ -80,6 +80,28 @@ module Curator
         end
       end
 
+      describe "find" do
+        it "resolves conflicts by last updated by default" do
+          data_store.update_settings!("fake_things_with_multi", :allow_mult => true)
+          key = SecureRandom.hex
+
+          data_store.save(
+            :collection_name => "fake_things_with_multi",
+            :key => key,
+            :value => {"k" => "1", "updated_at" => 5.minutes.ago}
+          )
+
+          data_store.save(
+            :collection_name => "fake_things_with_multi",
+            :key => key,
+            :value => {"k" => "2", "updated_at" => Time.now}
+          )
+
+          result = data_store.find_by_key("fake_things_with_multi", key)
+          result[:data].should include("k" => "2")
+        end
+      end
+
       context "bucket name dependent on environment" do
         it "defaults bucket name" do
           data_store::_bucket_name("my_bucket").should == "#{Curator.config.bucket_prefix}:test:my_bucket"

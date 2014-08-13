@@ -19,6 +19,7 @@ module Curator
       def delete(bucket_name, key, options = {})
         bucket = _bucket(bucket_name)
         object = bucket.get(key)
+        object.vclock = options[:vclock]
         object.delete
       end
 

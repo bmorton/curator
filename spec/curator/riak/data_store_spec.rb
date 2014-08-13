@@ -57,7 +57,7 @@ module Curator
         end
       end
 
-      describe "self.save" do
+      describe "save" do
         it "namespaces buckets with app and environment" do
           data_store.save(:collection_name => "fake_things", :key => "blah", :value => {"foo" => "bar"})
           data_store.client.bucket(data_store._bucket_name("fake_things")).get("blah").data.should == {"foo" => "bar"}
@@ -77,6 +77,44 @@ module Curator
           ensure
             data_store._bucket("fake_things").delete("blah")
           end
+        end
+
+        it "updates objects with the retrieved vclock" do
+          data_store.update_settings!("fake_things_with_multi", :allow_mult => true)
+          key = SecureRandom.hex
+
+          data_store.save(
+            :collection_name => "fake_things_with_multi",
+            :key => key,
+            :value => "i am plain text",
+            :content_type => "text/plain"
+          )
+          result = data_store.find_by_key("fake_things_with_multi", key)
+
+          data_store.save(
+            :collection_name => "fake_things_with_multi",
+            :key => key,
+            :value => "i am plain text and i'm updated",
+            :content_type => "text/plain",
+            :vclock => result[:vclock]
+          )
+
+          expect do
+            data_store.find_by_key("fake_things_with_multi", key)
+          end.to_not raise_error(::Riak::Conflict)
+        end
+      end
+
+      describe "find" do
+        it "returns the vclock of a retrieved object" do
+          data_store.save(
+            :collection_name => "fake_things",
+            :key => "thing",
+            :value => "i am plain text",
+            :content_type => "text/plain"
+          )
+          result = data_store.find_by_key("fake_things", "thing")
+          result[:vclock].should_not be_empty
         end
       end
 

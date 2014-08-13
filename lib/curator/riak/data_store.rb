@@ -39,6 +39,7 @@ module Curator
         bucket = _bucket(options[:collection_name])
         object = ::Riak::RObject.new(bucket, options[:key])
         object.content_type = options.fetch(:content_type, "application/json")
+        object.vclock = options[:vclock]
         object.data = options[:value]
         options.fetch(:index, {}).each do |index_name, index_data|
           object.indexes["#{index_name}_bin"].merge(Array(index_data))
@@ -56,7 +57,8 @@ module Curator
         bucket = _bucket(bucket_name)
         begin
           object = bucket.get(key)
-          { :key => object.key, :data => _deserialize(object.data) } unless object.data.empty?
+          data = _deserialize(object.data)
+          { :key => object.key, :data => data, :vclock => object.vclock } unless object.data.empty?
         rescue ::Riak::HTTPFailedRequest, ::Riak::ProtobuffsFailedRequest => failed_request
           raise failed_request unless failed_request.not_found?
         end

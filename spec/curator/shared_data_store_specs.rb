@@ -70,17 +70,20 @@ shared_examples "data_store" do
 
     it "returns an object by key" do
       data_store.save(:collection_name => "fake_things", :key => "some_key", :value => {"k" => "v"})
-      data_store.find_by_key("fake_things", "some_key").should == {:key => "some_key", :data => {"k" => "v"}}
+      object = data_store.find_by_key("fake_things", "some_key")
+      object[:data].should include("k" => "v")
     end
 
     it "object key can contain a + character" do
       data_store.save(:collection_name => "fake_things", :key => "special+key", :value => {"k" => "v"})
-      data_store.find_by_key("fake_things", "special+key").should == {:key => "special+key", :data => {"k" => "v"}}
+      object = data_store.find_by_key("fake_things", "special+key")
+      object[:key].should == "special+key"
     end
 
     it "can find by a generated key" do
       key = data_store.save(:collection_name => "fake_things", :value => {"k" => "v"})
-      data_store.find_by_key("fake_things", key).should == {:key => key, :data => {"k" => "v"}}
+      object = data_store.find_by_key("fake_things", key)
+      object[:data].should include("k" => "v")
     end
   end
 
@@ -101,7 +104,8 @@ shared_examples "data_store" do
     it 'updates objects in place' do
       data_store.save(collection_name: 'fake_things', :key => 'foo', :value => {'foo' => 1})
       data_store.save(collection_name: 'fake_things', :key => 'foo', :value => {'foo' => 2})
-      data_store.find_by_key('fake_things', 'foo').should == {:key => 'foo', :data => {'foo' => 2}}
+      object = data_store.find_by_key('fake_things', 'foo')
+      object[:data].should include('foo' => 2)
     end
 
     it "can index by multiple things" do

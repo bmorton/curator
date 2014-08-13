@@ -95,14 +95,16 @@ module Curator
           ::Riak.escaper = URI
           data_store.save(:collection_name => "fake_things", :key => "some_key", :value => {"k" => "v"})
           ::Riak.escaper = CGI
-          data_store.find_by_key("fake_things", "some_key").should == {:key => "some_key", :data => {"k" => "v"}}
+          object = data_store.find_by_key("fake_things", "some_key")
+          object[:data].should include("k" => "v")
         end
 
         it "can read data with URI escaper that was written with CGI escaper" do
           ::Riak.escaper = CGI
           data_store.save(:collection_name => "fake_things", :key => "some_key", :value => {"k" => "v"})
           ::Riak.escaper = URI
-          data_store.find_by_key("fake_things", "some_key").should == {:key => "some_key", :data => {"k" => "v"}}
+          object = data_store.find_by_key("fake_things", "some_key")
+          object[:data].should include("k" => "v")
         end
       end
 
